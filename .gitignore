@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+*.so
+*.dylib
+
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Maturin build artifacts
+*.whl
+md_engine/*.so
+md_engine/*.pyd
+
+# PyTorch / ML
+checkpoints/
+*.pt
+*.pth
+wandb/
+runs/
+lightning_logs/
+
+# Data
+data/
+results/
+*.csv
+*.sdf
+*.mol2
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
