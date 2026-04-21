@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name            = "affinityvm"
 version         = "0.1.0"
-description     = "Sub-FEP+ binding affinity engine with Rust molecular dynamics"
+description     = "Binding affinity prediction engine with Rust molecular dynamics"
 readme          = "README.md"
 license         = { file = "LICENSE" }
 requires-python = ">=3.9"
