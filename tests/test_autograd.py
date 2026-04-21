@@ -65,10 +65,9 @@ def test_gradient_numerical():
     e_a.backward()
     ag_grad = lat_a.grad[0].item()
 
-    assert abs(fd_grad - ag_grad) < 0.5 or abs(fd_grad) < 1e-6, (
+    assert abs(fd_grad - ag_grad) < 0.5, (
         f"Numerical grad {fd_grad:.4f} vs autograd {ag_grad:.4f}"
     )
-
 
 def test_engine_survives_gc():
     """Rust Engine must remain alive through GC until backward() completes."""
