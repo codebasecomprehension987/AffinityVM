@@ -22,6 +22,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
+import yaml
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
@@ -33,6 +34,16 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger(__name__)
+
+
+def load_config(path: str) -> dict:
+    """Load YAML config, returning empty dict if file not found."""
+    try:
+        with open(path) as f:
+            return yaml.safe_load(f) or {}
+    except FileNotFoundError:
+        log.warning("Config file not found at %s, using CLI args only.", path)
+        return {}
 
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
@@ -63,13 +74,18 @@ def train(args: argparse.Namespace) -> None:
     device = "cuda" if torch.cuda.is_available() and not args.cpu else "cpu"
     log.info("Device: %s", device)
 
-    config   = PipelineConfig(n_md_steps=args.n_md_steps, dt=0.001,
-                               device=device, batch_size=args.batch_size)
+    cfg    = load_config(args.config)
+    md_cfg = cfg.get("md", {})
+    config = PipelineConfig(
+        n_md_steps=args.n_md_steps if args.n_md_steps is not None else md_cfg.get("n_steps", 10_000),
+        dt=md_cfg.get("dt", 0.001),
+        device=device,
+        batch_size=args.batch_size,
+    )
     pipeline = AffinityPipeline(config=config).to(device)
 
     smiles_all, labels_all = load_csv(args.data)
     log.info("Loaded %d molecules from %s", len(smiles_all), args.data)
-
     n      = len(smiles_all)
     perm   = np.random.permutation(n)
     split  = int(0.8 * n)
@@ -155,10 +171,12 @@ def train(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Train AffinityVM")
     p.add_argument("--data",       required=True, help="CSV with smiles,pic50 columns")
+    p.add_argument("--config",     default="configs/default.yaml", help="YAML config file")
     p.add_argument("--epochs",     type=int,   default=50)
     p.add_argument("--batch_size", type=int,   default=16)
     p.add_argument("--lr",         type=float, default=3e-4)
-    p.add_argument("--n_md_steps", type=int,   default=10_000)
+    p.add_argument("--n_md_steps", type=int,   default=None,
+                   help="MD steps per molecule; overrides config file if set")
     p.add_argument("--output",     default="checkpoints/")
     p.add_argument("--cpu",        action="store_true", help="Force CPU even if CUDA is available")
     return p.parse_args()
