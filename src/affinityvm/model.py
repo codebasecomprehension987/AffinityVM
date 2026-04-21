@@ -125,6 +125,11 @@ class LigandGNN(nn.Module):
         Returns:
             latent [B, 256]
         """
+        if data.x.size(0) > self.MAX_ATOMS * (data.batch.max().item() + 1):
+            raise ValueError(
+                f"Batch contains a molecule exceeding MAX_ATOMS={self.MAX_ATOMS}. "
+                f"Filter oversized molecules before batching."
+            )
         x          = data.x.float()
         edge_index = data.edge_index
         edge_attr  = data.edge_attr.float() if data.edge_attr is not None else None
