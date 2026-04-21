@@ -110,23 +110,26 @@ def train(args: argparse.Namespace) -> None:
         # ── Validate ──────────────────────────────────────────────────────
         pipeline.eval()
         val_preds: list[float] = []
+        val_labels_matched: list[float] = []
         for i in range(0, len(smiles_val), args.batch_size):
+            batch_labels_val = labels_val[i : i + args.batch_size]
             try:
                 with torch.no_grad():
                     preds = pipeline(smiles_val[i : i + args.batch_size]).cpu().numpy()
                 val_preds.extend(preds.tolist())
+                val_labels_matched.extend(batch_labels_val.tolist())
             except Exception as exc:
-                log.warning("Validation batch error: %s", exc)
+                log.warning("Validation batch error (skipping %d molecules): %s",
+                            len(batch_labels_val), exc)
 
         n_val = len(val_preds)
         if n_val:
             val_rmse = float(np.sqrt(np.mean(
-                (np.array(val_preds) - labels_val[:n_val]) ** 2
+                (np.array(val_preds) - np.array(val_labels_matched)) ** 2
             )))
-            pearson = float(np.corrcoef(val_preds, labels_val[:n_val])[0, 1])
+            pearson = float(np.corrcoef(val_preds, val_labels_matched)[0, 1])
         else:
             val_rmse = pearson = float("nan")
-
         log.info(
             "Epoch %3d/%d | train_RMSE=%.4f | val_RMSE=%.4f | Pearson=%.4f | lr=%.2e",
             epoch, args.epochs, train_rmse, val_rmse, pearson,
