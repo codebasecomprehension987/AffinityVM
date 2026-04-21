@@ -113,6 +113,12 @@ class MoleculeFeaturizer:
           smiles     — canonical SMILES
         """
         mol = self._to_mol(smiles_or_mol)
+        n_heavy = mol.GetNumAtoms()
+        if n_heavy > self.max_atoms:
+            raise ValueError(
+                f"Molecule has {n_heavy} heavy atoms, exceeding max_atoms={self.max_atoms}. "
+                f"Increase max_atoms or filter this molecule before featurizing."
+            )
         mol = Chem.AddHs(mol)
 
         positions = self._embed_3d(mol)
@@ -164,7 +170,13 @@ class MoleculeFeaturizer:
             if AllChem.EmbedMolecule(mol_with_Hs, ps) == 0:
                 break
         if mol_with_Hs.GetNumConformers() == 0:
-            AllChem.EmbedMolecule(mol_with_Hs, AllChem.ETKDG())
+            result = AllChem.EmbedMolecule(mol_with_Hs, AllChem.ETKDG())
+            if result == -1:
+                raise ValueError(
+                    f"3D embedding failed after all attempts for molecule with "
+                    f"{mol_with_Hs.GetNumAtoms()} atoms. "
+                    f"SMILES: {Chem.MolToSmiles(Chem.RemoveHs(mol_with_Hs))}"
+                )
         try:
             AllChem.MMFFOptimizeMolecule(mol_with_Hs, maxIters=500)
         except Exception:
