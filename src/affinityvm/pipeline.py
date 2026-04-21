@@ -93,9 +93,8 @@ class AffinityPipeline(nn.Module):
         Returns:
             predictions: float32 tensor of shape [B]
         """
-        device       = self.config.device
+        device       = next(self.parameters()).device
         feat_outputs = [self.featurizer.featurize(s) for s in smiles_list]
-
         batch   = Batch.from_data_list([fo["data"] for fo in feat_outputs]).to(device)
         latents = self.gnn(batch)  # [B, 256]
 
@@ -111,7 +110,7 @@ class AffinityPipeline(nn.Module):
             energies.append(e_i)
             caches.append(cache_i)
 
-        self._engine_caches = caches  # keep alive until backward
+        engine_caches = caches  # local ref keeps engines alive until backward completes
 
         energy_tensor = torch.stack(energies).to(device)  # [B]
         return self.head(latents, energy_tensor)
