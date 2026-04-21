@@ -1,0 +1,67 @@
+[build-system]
+requires      = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name            = "affinityvm"
+version         = "0.1.0"
+description     = "Sub-FEP+ binding affinity engine with Rust molecular dynamics"
+readme          = "README.md"
+license         = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors         = [{ name = "AffinityVM Contributors" }]
+keywords        = ["drug-discovery", "molecular-dynamics", "binding-affinity", "free-energy"]
+classifiers     = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+]
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.1",
+    "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+gnn = [
+    "torch_geometric>=2.4",
+    "torch_scatter",
+    "torch_sparse",
+]
+chem = [
+    "rdkit>=2023.3",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov",
+    "black",
+    "ruff",
+    "mypy",
+]
+all = ["affinityvm[gnn,chem,dev]"]
+
+[project.scripts]
+affinityvm-train     = "affinityvm.scripts.train:main"
+affinityvm-benchmark = "affinityvm.scripts.benchmark:main"
+
+[tool.maturin]
+python-source = "src"
+module-name   = "md_engine"
+manifest-path = "md_engine/Cargo.toml"
+features      = ["pyo3/extension-module"]
+
+[tool.ruff]
+line-length = 100
+select      = ["E", "F", "I", "N", "W"]
+
+[tool.mypy]
+python_version        = "3.10"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths      = ["tests"]
+addopts        = "-v --tb=short"
+filterwarnings = ["ignore::DeprecationWarning"]
