@@ -1,0 +1,30 @@
+[package]
+name        = "md_engine"
+version     = "0.1.0"
+edition     = "2021"
+authors     = ["AffinityVM Contributors"]
+description = "AVX-512 SIMD molecular dynamics engine with autodiff via LLVM Enzyme"
+license     = "MIT"
+
+[lib]
+name       = "md_engine"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3      = { version = "0.21", features = ["extension-module", "abi3-py39"] }
+ndarray   = { version = "0.15", features = ["rayon"] }
+numpy     = "0.21"
+rayon     = "1.9"
+thiserror = "1.0"
+log       = "0.4"
+enzyme-ad = { git = "https://github.com/EnzymeAD/rustenzyme", optional = true }
+
+[features]
+default  = ["avx512"]
+avx512   = []
+autodiff = ["enzyme-ad"]
+
+[profile.release]
+opt-level     = 3
+lto           = "fat"
+codegen-units = 1
