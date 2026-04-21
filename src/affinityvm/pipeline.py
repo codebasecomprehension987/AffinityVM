@@ -132,7 +132,7 @@ class AffinityPipeline(nn.Module):
 
     @classmethod
     def load(cls, path: str, map_location: str = "cpu") -> "AffinityPipeline":
-        ckpt     = torch.load(path, map_location=map_location)
+        ckpt     = torch.load(path, map_location=map_location, weights_only=False)
         pipeline = cls(config=ckpt["config"])
         pipeline.gnn.load_state_dict(ckpt["gnn_state"])
         pipeline.head.load_state_dict(ckpt["head_state"])
