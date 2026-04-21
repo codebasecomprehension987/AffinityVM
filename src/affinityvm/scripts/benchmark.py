@@ -44,7 +44,11 @@ def run(args: argparse.Namespace) -> None:
     smiles_list, names, labels = load_csv(args.data)
 
     log.info("Running inference on %d molecules...", len(smiles_list))
-    preds = pipeline.predict(smiles_list)
+    all_preds = []
+    for i in range(0, len(smiles_list), args.batch_size):
+        batch = smiles_list[i : i + args.batch_size]
+        all_preds.extend(pipeline.predict(batch).tolist())
+    preds = np.array(all_preds, dtype=np.float32)
 
     records = [
         {
