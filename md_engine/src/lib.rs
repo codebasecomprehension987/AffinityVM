@@ -466,6 +466,7 @@ impl Engine {
     }
 
     /// Compute dE/d_latent for the backward pass (GIL released).
+    /// Gradient is evaluated at the post-MD geometry stored in self.state.positions.
     fn energy_grad_latent<'py>(
         &self,
         py:          Python<'py>,
