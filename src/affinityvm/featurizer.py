@@ -123,7 +123,8 @@ class MoleculeFeaturizer:
 
         positions = self._embed_3d(mol)
 
-        # Strip Hs for graph features but retain heavy-atom coords
+        # AddHs appends H atoms after heavy atoms, so heavy_idx [0..N_heavy-1]
+        # correctly selects the heavy-atom rows from positions.
         mol_noH     = Chem.RemoveHs(mol)
         heavy_idx   = [a.GetIdx() for a in mol_noH.GetAtoms()]
         pos_heavy   = positions[heavy_idx]
