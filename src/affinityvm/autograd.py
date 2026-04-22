@@ -1,22 +1,12 @@
 """
-MDFunction — torch.autograd.Function bridging Python <-> Rust for backprop.
+Custom autograd bridge: GNN latent -> Rust MD engine -> potential energy scalar.
 
-Forward:
-  1. Accept GNN latent (256-dim, possibly on GPU).
-  2. Transfer to CPU numpy (zero-copy when already CPU float32).
-  3. Call Engine.step(n_steps) — all MD steps run in Rust, GIL released.
-  4. Return total potential energy as a scalar tensor.
+Forward runs all MD steps in Rust (GIL released) and returns a differentiable
+scalar energy. Backward calls energy_grad_latent() on the Rust engine, which
+computes dE/d_latent via forward finite differences over the latent dimensions.
 
-Backward:
-  d_loss/d_latent = (d_loss/dE) * (dE/d_latent)
-  dE/d_latent is computed by Engine.energy_grad_latent(), which calls
-  Enzyme-autodiff'd Rust code (or finite-diff fallback).
-
-Memory safety:
-  The Rust Engine is stored in ctx.engine_cache (a plain Python list).
-  Python's GC cannot collect it while ctx lives on the autograd graph,
-  which persists until backward() completes. The PyO3 PhantomData<'py>
-  in the Rust binding enforces the same constraint at compile time.
+The Rust Engine is kept alive by storing it in engine_cache, a plain Python list
+held on ctx. This prevents GC from freeing the engine before backward() completes.
 """
 
 from __future__ import annotations
@@ -74,7 +64,7 @@ class MDFunction(Function):
         if grad_output.device.type != "cpu":
             grad_latent = grad_latent.to(grad_output.device)
 
-        # Gradients for: latent, positions, masses, n_steps, dt, engine_cache
+        # One gradient per forward() argument; non-differentiable args return None
         return grad_latent, None, None, None, None, None
 
 
