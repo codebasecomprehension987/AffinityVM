@@ -83,7 +83,7 @@ class AffinityPipeline(nn.Module):
         self.featurizer = MoleculeFeaturizer(max_atoms=self.config.max_atoms)
         self.gnn        = LigandGNN()
         self.head       = RegressionHead()
-        # Populated each forward pass to prevent GC of Rust engines during backward
+        # Declared here for attribute consistency only; populated per forward call
         self._engine_caches: list = []
 
     def forward(self, smiles_list: list[str]) -> torch.Tensor:
@@ -110,7 +110,7 @@ class AffinityPipeline(nn.Module):
             energies.append(e_i)
             caches.append(cache_i)
 
-        engine_caches = caches  # local ref keeps engines alive until backward completes
+        engine_caches = caches  # holds Rust Engine refs; must stay in scope until backward()
 
         energy_tensor = torch.stack(energies).to(device)  # [B]
         return self.head(latents, energy_tensor)
