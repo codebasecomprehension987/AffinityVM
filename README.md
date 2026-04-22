@@ -7,6 +7,9 @@ to predict pIC50 from SMILES alone — no crystal structure required. Gradients 
 end-to-end through the MD step via a custom `torch.autograd.Function` and a
 forward finite-difference VJP.
 
+> **Status:** Research codebase. No pre-trained weights or benchmarks are included.
+> Results depend entirely on the training data and hyperparameter choices you supply.
+
 ```
 SMILES
   -> LigandGNN (PyTorch Geometric)
@@ -97,8 +100,8 @@ from affinityvm import AffinityPipeline
 pipeline = AffinityPipeline.load("checkpoints/best_model.pt")
 
 smiles = [
-    "CC(=O)Nc1ccc(O)cc1",               # paracetamol
-    "CC12CCC3C(C1CCC2O)CCC4=CC(=O)CCC34C",  # testosterone
+    "CC(=O)Nc1ccc(O)cc1",                        # paracetamol
+    "CC12CCC3C(C1CCC2O)CCC4=CC(=O)CCC34C",       # testosterone
 ]
 
 predictions = pipeline.predict(smiles)
@@ -106,17 +109,20 @@ for smi, pic50 in zip(smiles, predictions):
     print(f"{smi[:40]:<40}  pIC50 = {pic50:.2f}")
 ```
 
+> A checkpoint must be produced by running training before `load()` will work.
+> No pre-trained checkpoint is included in this repository.
+
 ---
 
 ## Training
 
 ```bash
 affinityvm-train \
-    --data     data/fep_benchmark.csv \
-    --epochs   50                     \
-    --batch_size 16                   \
-    --n_md_steps 10000                \
-    --output   checkpoints/
+    --data       data/fep_benchmark.csv \
+    --epochs     50                     \
+    --batch_size 16                     \
+    --n_md_steps 10000                  \
+    --output     checkpoints/
 ```
 
 `configs/default.yaml` supplies defaults for all parameters. Any CLI argument
@@ -128,8 +134,8 @@ passed explicitly overrides the corresponding config value.
 
 ```bash
 affinityvm-benchmark \
-    --checkpoint checkpoints/best_model.pt       \
-    --data       data/fep_benchmark.csv          \
+    --checkpoint checkpoints/best_model.pt      \
+    --data       data/fep_benchmark.csv         \
     --output     results/benchmark_results.json
 ```
 
