@@ -3,7 +3,7 @@ name        = "md_engine"
 version     = "0.1.0"
 edition     = "2021"
 authors     = ["AffinityVM Contributors"]
-description = "AVX-512 SIMD molecular dynamics engine with autodiff via LLVM Enzyme"
+description = "AVX-512 SIMD molecular dynamics engine with PyO3 Python bindings"
 license     = "MIT"
 
 [lib]
@@ -16,12 +16,10 @@ ndarray   = { version = "0.15" }
 numpy     = "0.21"
 thiserror = "1.0"
 log       = "0.4"
-enzyme-ad = { git = "https://github.com/EnzymeAD/rustenzyme", rev = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2", optional = true }
 
 [features]
 default  = []
 avx512   = []
-autodiff = ["enzyme-ad"]
 
 [profile.release]
 opt-level     = 3
