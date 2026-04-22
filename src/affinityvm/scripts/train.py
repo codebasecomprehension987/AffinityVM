@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 
 
 def load_config(path: str) -> dict:
-    """Load YAML config, returning empty dict if file not found."""
+    """Read configs/default.yaml. CLI args take precedence over any value found here."""
     try:
         with open(path) as f:
             return yaml.safe_load(f) or {}
@@ -47,7 +47,6 @@ def load_config(path: str) -> dict:
 
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
-
 def load_csv(path: str) -> tuple[list[str], np.ndarray]:
     """Load SMILES + pIC50 from a CSV with columns: smiles, pic50."""
     smiles_list, labels = [], []
@@ -102,7 +101,7 @@ def train(args: argparse.Namespace) -> None:
     history: list[dict] = []
 
     for epoch in range(1, args.epochs + 1):
-        # ── Train ─────────────────────────────────────────────────────────
+        # Training pass — accumulate sum-of-squared errors for RMSE logging
         pipeline.train()
         sq_errors: list[float] = []
 
@@ -123,7 +122,7 @@ def train(args: argparse.Namespace) -> None:
         n_train    = len(smiles_train)
         train_rmse = float(np.sqrt(sum(sq_errors) / n_train)) if sq_errors else float("nan")
 
-        # ── Validate ──────────────────────────────────────────────────────
+        # Validation pass — labels tracked per-batch to stay aligned if any batch is skipped
         pipeline.eval()
         val_preds: list[float] = []
         val_labels_matched: list[float] = []
