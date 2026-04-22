@@ -1,16 +1,17 @@
+```markdown
 # AffinityVM
 
 **Binding affinity prediction with a differentiable Rust MD engine**
 
-AffinityVM combines a PyTorch Geometric GNN with a Rust molecular-dynamics engine to predict pIC50 from SMILES alone — no crystal structure required. Gradients flow end-to-end through the MD step via a custom `torch.autograd.Function` and an Enzyme-autodiff VJP.
+AffinityVM combines a PyTorch Geometric GNN with a Rust molecular-dynamics engine to predict pIC50 from SMILES alone — no crystal structure required. Gradients flow end-to-end through the MD step via a custom `torch.autograd.Function` and a forward finite-difference VJP.
 
 ```
 SMILES
-  -> LigandGNN (PyTorch Geometric)        [GPU]
+  -> LigandGNN (PyTorch Geometric)
        -> 256-dim latent
-            -> Rust md_engine (AVX-512 SIMD)   [CPU, GIL-free]
+            -> Rust md_engine (SIMD when built with --features avx512)   [CPU, GIL-free]
                  10,000 MD steps, LJ + Coulomb forces
-                 -> dE/d_latent (Enzyme autodiff VJP)
+                 -> dE/d_latent (forward finite-difference VJP)
                       -> RegressionHead -> pIC50
 ```
 
@@ -19,15 +20,15 @@ SMILES
 | Component | Technology | Role |
 |-----------|-----------|------|
 | `LigandGNN` | PyTorch Geometric GATv2 | Molecular graph → 256-dim latent |
-| `md_engine` (Rust) | PyO3 + AVX-512 intrinsics | 10k MD steps, single blocking call |
-| `MDFunction` | `torch.autograd.Function` | Differentiable bridge, custom VJP |
+| `md_engine` (Rust) | PyO3 + optional AVX-512 intrinsics | 10k MD steps, single blocking call |
+| `MDFunction` | `torch.autograd.Function` | Differentiable bridge, forward finite-difference VJP |
 | `AffinityPipeline` | Python | End-to-end training & inference |
 
 ### Why Rust for the MD loop?
 
 Python-level MD pays per-step overhead from `PyObject` creation, GIL acquisition, and NumPy copy costs. At 10,000 steps per ligand this adds up. The Rust `md_engine` crate:
 
-- Evaluates Lennard-Jones + Coulomb pairwise forces using `std::arch::x86_64::_mm512_*` intrinsics — 16 floats/cycle, no auto-vectorisation guessing.
+- Evaluates Lennard-Jones + Coulomb pairwise forces using `std::arch::x86_64::_mm512_*` intrinsics when built with `--features avx512`; falls back to a scalar i<j loop on all other targets.
 - Exposes `Engine::step(n)` — Python calls it **once**, all steps execute in Rust, GIL released via `py.allow_threads`.
 - Zero-copy latent transfer: the GNN latent is passed as an `ndarray::ArrayView` backed by NumPy memory — no allocation.
 
@@ -47,10 +48,13 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # 2. Install maturin
 pip install maturin
 
-# 3. Build the Rust extension
+# 3. Build the Rust extension (scalar-only build)
 maturin develop --release -m md_engine/Cargo.toml
 
-# 4. Install Python dependencies
+# 4. Build with AVX-512 SIMD (x86-64 only)
+maturin develop --release -m md_engine/Cargo.toml --features avx512
+
+# 5. Install Python dependencies
 pip install -e ".[gnn,chem]"
 ```
 
@@ -87,6 +91,8 @@ affinityvm-train \
     --output checkpoints/
 ```
 
+Config values in `configs/default.yaml` are used as defaults. Any value passed via CLI argument overrides the config file.
+
 ## Benchmark
 
 ```bash
@@ -96,9 +102,7 @@ affinityvm-benchmark \
     --output results/benchmark_results.json
 ```
 
-Results are written to the output JSON. No pre-trained checkpoint or experimental
-results are included in this repository; the numbers you see will depend entirely
-on the data and training run you supply.
+Results are written to the output JSON. No pre-trained checkpoint or experimental results are included in this repository; the numbers you see will depend entirely on the data and training run you supply.
 
 ## Repository structure
 
@@ -106,7 +110,7 @@ on the data and training run you supply.
 affinityvm/
 ├── md_engine/                  # Rust crate (PyO3)
 │   ├── Cargo.toml
-│   └── src/lib.rs              # AVX-512 SIMD forces, Enzyme VJP
+│   └── src/lib.rs              # LJ + Coulomb forces, optional AVX-512, finite-difference VJP
 ├── src/affinityvm/             # Python package
 │   ├── __init__.py
 │   ├── engine.py               # Python wrapper around Rust engine
@@ -127,3 +131,4 @@ affinityvm/
 ## License
 
 MIT
+```
